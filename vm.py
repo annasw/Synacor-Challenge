@@ -1,7 +1,6 @@
 #!/usr/bin/env python2.7
 
 import sys, io
-
 import struct
 
 class VM:
@@ -28,27 +27,20 @@ class VM:
 		self.memory = []
 	
 	# returns either the literal value or the appropriate elt from self.registers
-	def getValue(self, i, regs):
+	def getValue(self, i):
 		assert i < self.MAX_INT+8 # invalid numbers
 		if i < self.MAX_INT: # return literal
 			return i
 		else: # return val from self.registers
-			return regs[i%self.MAX_INT]
+			return self.registers[i%self.MAX_INT]
 
-	def writeRegister(self, a,b,regs):
-		regs[a%32768] = b
-	
 	def mainLoop(self):
 		while True:
-			#print(self.memory[self.location],end=" ")
-			#print(self.location)
-			#self.location = self.getValue(self.location,self.registers)
 			nextCmd = self.memory[self.location]
 			
-			# method to try to extract the algorithm:
+			# trying to extract the algorithm:
 			if self.tracking:
 				inc = self.increment[nextCmd]
-				#print inc
 				for i in range(self.location,self.location+inc+1):
 					print self.memory[i],
 				print ""
@@ -60,20 +52,20 @@ class VM:
 			elif nextCmd == 1: # set
 				'''set register <a> to the value of <b>'''
 				a = self.memory[self.location+1]%32768
-				b = self.getValue(self.memory[self.location+2],self.registers)
+				b = self.getValue(self.memory[self.location+2])
 				self.registers[a] = b
 				self.location += 3
 				
 			elif nextCmd == 2: # push
 				'''push <a> onto the self.stack'''
-				a = self.getValue(self.memory[self.location+1],self.registers)
+				a = self.getValue(self.memory[self.location+1])
 				self.stack.append(a)
 				self.location += 2
 				
 			elif nextCmd == 3: # pop
 				'''remove the top element from the self.stack and write it into <a>; empty self.stack = error'''
 				try:
-					# we can just use list.pop()
+					# we can just use list.pop() too
 					self.registers[self.memory[self.location+1]%32768] = self.stack[-1]
 					self.stack = self.stack[:-1]
 				except:
@@ -83,8 +75,8 @@ class VM:
 			elif nextCmd == 4: # eq
 				'''set <a> to 1 if <b> is equal to <c>; set it to 0 otherwise'''
 				a = self.memory[self.location+1]%32768
-				b = self.getValue(self.memory[self.location+2],self.registers)
-				c = self.getValue(self.memory[self.location+3],self.registers)
+				b = self.getValue(self.memory[self.location+2])
+				c = self.getValue(self.memory[self.location+3])
 				
 				if b==c: self.registers[a] = 1
 				else: self.registers[a] = 0
@@ -94,8 +86,8 @@ class VM:
 			elif nextCmd == 5: # gt
 				'''set <a> to 1 if <b> is greater than <c>; set it to 0 otherwise'''
 				a = self.memory[self.location+1]%32768
-				b = self.getValue(self.memory[self.location+2],self.registers)
-				c = self.getValue(self.memory[self.location+3],self.registers)
+				b = self.getValue(self.memory[self.location+2])
+				c = self.getValue(self.memory[self.location+3])
 				
 				if b>c: self.registers[a] = 1
 				else: self.registers[a] = 0
@@ -104,22 +96,21 @@ class VM:
 				
 			elif nextCmd == 6: # jmp
 				'''jump to <a>'''
-				a = self.memory[self.location+1]
-				#if a >= 32768: a = self.registers[a%32768]
+				a = self.getValue(self.memory[self.location+1])
 				self.location = a
 				
 			elif nextCmd == 7: # jt
 				'''if <a> is nonzero, jump to <b>'''
-				a = self.getValue(self.memory[self.location+1],self.registers)
-				b = self.memory[self.location+2] # maybe convert
+				a = self.getValue(self.memory[self.location+1])
+				b = self.getValue(self.memory[self.location+2])
 				
 				if a != 0: self.location = b
 				else: self.location += 3
 					
 			elif nextCmd == 8: # jf
 				'''if <a> is zero, jump to <b>'''
-				a = self.getValue(self.memory[self.location+1],self.registers)
-				b = self.getValue(self.memory[self.location+2],self.registers)
+				a = self.getValue(self.memory[self.location+1])
+				b = self.getValue(self.memory[self.location+2])
 				
 				if a == 0: self.location = b
 				else: self.location += 3
@@ -127,8 +118,8 @@ class VM:
 			elif nextCmd == 9: # add
 				'''assign into <a> the sum of <b> and <c> (modulo 32768)'''
 				a = self.memory[self.location+1]%32768
-				b = self.getValue(self.memory[self.location+2],self.registers)
-				c = self.getValue(self.memory[self.location+3],self.registers)
+				b = self.getValue(self.memory[self.location+2])
+				c = self.getValue(self.memory[self.location+3])
 				
 				self.registers[a] = (b+c)%32768
 				
@@ -137,8 +128,8 @@ class VM:
 			elif nextCmd == 10: # mult
 				'''store into <a> the product of <b> and <c> (modulo 32768)'''
 				a = self.memory[self.location+1]%32768
-				b = self.getValue(self.memory[self.location+2],self.registers)
-				c = self.getValue(self.memory[self.location+3],self.registers)
+				b = self.getValue(self.memory[self.location+2])
+				c = self.getValue(self.memory[self.location+3])
 			
 				self.registers[a] = (b*c)%32768
 				
@@ -147,8 +138,8 @@ class VM:
 			elif nextCmd == 11: # mod
 				'''store into <a> the remainder of <b> divided by <c>'''
 				a = self.memory[self.location+1]%32768
-				b = self.getValue(self.memory[self.location+2],self.registers)
-				c = self.getValue(self.memory[self.location+3],self.registers)
+				b = self.getValue(self.memory[self.location+2])
+				c = self.getValue(self.memory[self.location+3])
 				
 				self.registers[a] = (b%c)
 				
@@ -157,8 +148,8 @@ class VM:
 			elif nextCmd == 12: # and
 				'''stores into <a> the bitwise and of <b> and <c>'''
 				a = self.memory[self.location+1]%32768
-				b = self.getValue(self.memory[self.location+2],self.registers)
-				c = self.getValue(self.memory[self.location+3],self.registers)
+				b = self.getValue(self.memory[self.location+2])
+				c = self.getValue(self.memory[self.location+3])
 				
 				self.registers[a] = (b&c)
 				
@@ -167,8 +158,8 @@ class VM:
 			elif nextCmd == 13: # or
 				'''stores into <a> the bitwise or of <b> and <c>'''
 				a = self.memory[self.location+1]%32768
-				b = self.getValue(self.memory[self.location+2],self.registers)
-				c = self.getValue(self.memory[self.location+3],self.registers)
+				b = self.getValue(self.memory[self.location+2])
+				c = self.getValue(self.memory[self.location+3])
 				
 				self.registers[a] = (b|c)
 				
@@ -177,31 +168,31 @@ class VM:
 			elif nextCmd == 14: # not
 				'''stores 15-bit bitwise inverse of <b> in <a>'''
 				a = self.memory[self.location+1]%32768
-				b = self.getValue(self.memory[self.location+2],self.registers)
+				b = self.getValue(self.memory[self.location+2])
 				
-				self.registers[a] = b^32767
+				self.registers[a] = b^32767 # produces the 15-bit bitwise inverse of b
 						
 				self.location += 3
 				
 			elif nextCmd == 15: # rmem
 				'''read self.memory at address <b> and write it to <a>'''
 				a = self.memory[self.location+1]%32768
-				b = self.getValue(self.memory[self.location+2],self.registers)
+				b = self.getValue(self.memory[self.location+2])
 				self.registers[a] = self.memory[b]
 				self.location += 3
 				
 			elif nextCmd == 16: # wmem
 				'''write the value from <b> into self.memory at address <a>'''
-				a = self.getValue(self.memory[self.location+1],self.registers)
-				b = self.getValue(self.memory[self.location+2],self.registers)
+				a = self.getValue(self.memory[self.location+1])
+				b = self.getValue(self.memory[self.location+2])
 				self.memory[a] = b
 				
 				self.location += 3
 				
-			elif nextCmd == 17: # call # weird and MIGHT BE WRONG
+			elif nextCmd == 17: # call
 				'''write the address of the next instruction to the self.stack and jump to <a>'''
 				self.stack.append(self.location+2)
-				self.location = self.getValue(self.memory[self.location+1],self.registers)
+				self.location = self.getValue(self.memory[self.location+1])
 				
 			elif nextCmd == 18: # ret
 				'''remove the top element from the self.stack and jump to it; empty self.stack = halt'''
@@ -213,14 +204,16 @@ class VM:
 					
 			elif nextCmd == 19: # out # ascii code of <a>
 				'''write the character represented by ascii code <a> to the terminal'''
-				#print(chr(self.getValue(self.memory[self.location+1],self.registers)), end = '')
-				sys.stdout.write(chr(self.getValue(self.memory[self.location+1],self.registers)))
+				sys.stdout.write(chr(self.getValue(self.memory[self.location+1])))
 				self.location += 2
 				
 			elif nextCmd == 20: # in
-				'''read a character from the terminal and write its ascii code to <a>; it can be assumed that once input starts, it will continue until a newline is encountered; this means that you can safely read whole lines from the keyboard and trust that they will be fully read'''
-				
+				'''read a character from the terminal and write its ascii code to <a>;
+				it can be assumed that once input starts, it will continue until a newline is encountered;
+				this means that you can safely read whole lines from the keyboard and trust that they will be fully read'''
+				# Check if we're currently reading something
 				if self.inputHandler == None:
+					# read in a new input
 					inString = raw_input()
 					
 					# handle special keywords
@@ -250,45 +243,23 @@ class VM:
 				'''no operation'''
 				self.location += 1
 				
-			else: # see what we're missing
-				#print(self.memory[0], end="")
-				#self.location += 1
-				#print(self.memory[self.location])
-				print self.memory[self.location]
-				break
-			
-			# after the operation, update self.location accordingly
-			# don't actually do this: it will double self.increment
-			# and fuck up jumps.
-			#self.location += self.increment[nextCmd]
+			else: pass # doesn't do anything anymore; was used to fill in missing operations
 
-# to convert x from utf-16 to ascii:
-# x = x.decode("utf-16") (or possibly utf-16-le, not sure if it matters)
-# to convert from ascii to int:
-# x = ord(x)
-# to convert from int to ascii:
-# x = char(x)
+# Read in from challenge.bin to memory
 def main():
+	# This can theoretically be altered to read in other files
 	filename = "challenge.bin"
 	
 	vm = VM()
 	
 	with open(filename, 'rb') as f:
-		# Read 16 bits at a time.
-		chunk = f.read(2)
-		while chunk != '':
-			vm.memory.append(struct.unpack('<H', chunk)[0])
-			chunk = f.read(2)
+		# we read in 16 bits at a time
+		c = f.read(2)
+		while c != '':
+			vm.memory.append(struct.unpack('<H', c)[0])
+			c = f.read(2)
 	
 	vm.mainLoop()
-	#while self.location < len(self.memory):
-	
-
-
-
-
-
-
 
 if __name__ == "__main__":
 	main()
